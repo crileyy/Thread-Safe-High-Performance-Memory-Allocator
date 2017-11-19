@@ -1,0 +1,59 @@
+Colin Riley, CJ Oka
+Challenge 2 - CS3650
+
+Thread-Safe High Performance Allocator: tested on CCIS Linux server
+
+Test Hardware:
+Operating system: CentOS Linux release 7.3.1611 (Core)
+
+Processor model: Intel(R) Xeon(R) CPU E5-2630 v3 @ 2.40GHz
+
+Total number of processors: 32
+
+RAM: 65693180 kB kB = 65.7 GB
+
+Memory Allocator Speed Test Results:
+Ivec tests:
+————————————————————————————————————————————————————————
+| Input size |     sys     |     hw7     |     par     |
+————————————————————————————————————————————————————————
+|  1000000   |    5.81     |   10+ mins  |    3.80     |
+————————————————————————————————————————————————————————
+|  2000000   |    12.90    |   10+ mins  |    7.23     |
+————————————————————————————————————————————————————————
+|  3000000   |    19.62    |   10+ mins  |    11.49    |
+————————————————————————————————————————————————————————
+
+List tests:
+————————————————————————————————————————————————————————
+| Input size |     sys     |     hw7     |     par     |
+————————————————————————————————————————————————————————
+|   400000   |    7.99     |   10+ mins  |    0.30     |
+————————————————————————————————————————————————————————
+|   450000   |    10.39    |   10+ mins  |    0.33     |
+————————————————————————————————————————————————————————
+|   500000   |    10.99    |   10+ mins  |    0.37     |
+————————————————————————————————————————————————————————
+
+Fast allocator strategy:
+In order to create a fast memory allocator we decided to fix the problems that slowed
+down the hw7 allocator: lock contention, algorithmic complexity, and calling mmap a
+lot. To decrease the runtime of malloc, we implemented 28 bins starting at 2^1,
+increasing by 1 every time (2^1, 2^2, 2^3, …, 2^28). This made the runtime of malloc
+O(1) because, instead of traversing a linked list every time malloc is called, the bin
+of the corresponding size to the what the user wants to allocate needs to be searched.
+This additionally made freeing O(1), as inserting a cell of memory into its proper bin
+is O(1) time.
+To decrease the amount of times mmap is called, we mmap’d a large chunk of memory (2
+million bytes) for our bins. This means that make_cell never gets called because there
+will always be enough space in the bins.
+To solve lock contention, we implemented multiple thread local arenas. Each thread has
+access to one arena, so there is no need to lock and unlock every time malloc and free
+are called.
+
+Results discussion:
+The results make sense because the par allocator should be faster than the system, as
+the par allocator uses bins and multiple thread local arenas. Additionally, it makes
+sense that the hw7 allocator is so slow because there are a lot of locks used in it and
+mmap is called a lot because the chunk size limit is a page (4096). It also makes sense
+that every allocator runs slower on a larger input because it has more data to process.
